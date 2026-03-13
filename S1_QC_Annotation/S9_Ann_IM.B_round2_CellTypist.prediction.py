@@ -7,7 +7,7 @@ import numpy as np
 import scipy
 import sc_utils
 import matplotlib as mpl
-pd.set_option('display.max_rows', None) 
+pd.set_option('display.max_rows', None)
 from copy import copy
 reds = copy(plt.cm.Reds)
 reds.set_under("lightgrey")
@@ -30,7 +30,7 @@ adata=scvi.data.read_h5ad("./Thymus/h5ad/ReferenceB.h5ad")
 
 #####build celltypise model
 adataOut = adata
-io.mmwrite(f'{tempOut}/{projectName}_forCellTypist', adataOut.X)
+io.mmwrite(f'{tempOut}/{projectName}_forCellTypist.mtx', adataOut.X)
 
 
 with open(f'{tempOut}/{projectName}_gene.tsv', 'w') as f:
@@ -40,13 +40,13 @@ with open(f'{tempOut}/{projectName}_gene.tsv', 'w') as f:
 
 
 reference_adata = adata
-cell_type_column = 'cell_type__custom'  
+cell_type_column = 'cell_type__custom'
 
 # Train CellTypist model
-model=celltypist.train(X=f'{tempOut}/{projectName}_forCellTypist.mtx', 
+model=celltypist.train(X=f'{tempOut}/{projectName}_forCellTypist.mtx',
                  genes=f"{tempOut}/{projectName}_gene.tsv",
                  labels=reference_adata.obs[cell_type_column],
-                 n_jobs = 10, 
+                 n_jobs = 10,
                  max_iter = 100)
 
 model.write(f"{SaveFolder}/{projectName}.pkl")
@@ -58,38 +58,38 @@ model.write(f"{SaveFolder}/{projectName}.pkl")
 ##################################################################
 nuData=scvi.data.read_h5ad("./Thymus/h5ad/Thymoma_All.B.h5ad")
 
-ct_predictions = celltypist.annotate(nuData, 
-                                     model =f"{SaveFolder}/{projectName}.pkl", 
+ct_predictions = celltypist.annotate(nuData,
+                                     model =f"{SaveFolder}/{projectName}.pkl",
                                      majority_voting = True)
 nuData0 = ct_predictions.to_adata()
 
-nuData0.obs.rename(columns={'predicted_labels': 'ThymomaLabel', 
+nuData0.obs.rename(columns={'predicted_labels': 'ThymomaLabel',
   'over_clustering':'ThymomaOver_clustering',
   'majority_voting':'ThymomaMajority_voting',
   'conf_score': 'ThymomaConfScore'}, inplace=True)
 
-atlas_predictions = celltypist.annotate(nuData0, 
-                                        model = 'Developing_Human_Thymus.pkl', 
+atlas_predictions = celltypist.annotate(nuData0,
+                                        model = 'Developing_Human_Thymus.pkl',
                                         majority_voting = True)
 nuData1 = atlas_predictions.to_adata()
-nuData1.obs.rename(columns={'predicted_labels': 'AtlasLabel', 
+nuData1.obs.rename(columns={'predicted_labels': 'AtlasLabel',
   'over_clustering':'AtlasOver_clustering',
   'majority_voting':'AtlasMajority_voting',
   'conf_score': 'AtlasConfScore'}, inplace=True)
 
 IMHigh = celltypist.annotate(nuData1,
-                             model = 'Immune_All_High.pkl', 
+                             model = 'Immune_All_High.pkl',
                              majority_voting = True)
 nuData2 = IMHigh.to_adata()
-nuData2.obs.rename(columns={'predicted_labels': 'ImHLabel', 
+nuData2.obs.rename(columns={'predicted_labels': 'ImHLabel',
   'over_clustering':'ImHOver_clustering',
   'majority_voting':'ImHMajority_voting',
   'conf_score': 'ImHConfScore'}, inplace=True)
 IMLow = celltypist.annotate(nuData2,
-                            model = 'Immune_All_Low.pkl', 
+                            model = 'Immune_All_Low.pkl',
                             majority_voting = True)
 nuData = IMLow.to_adata()
-nuData.obs.rename(columns={'predicted_labels': 'ImLLabel', 
+nuData.obs.rename(columns={'predicted_labels': 'ImLLabel',
   'over_clustering':'ImLOver_clustering',
   'majority_voting':'ImLMajority_voting',
   'conf_score': 'ImLConfScore'}, inplace=True)
@@ -117,12 +117,12 @@ outDataPath=f'{out_dir}/outData'
 if not os.path.exists(out_dir):
   os.makedirs(out_dir)
 if not os.path.exists(outMetaPath):
-  os.makedirs(outMetaPath)   
+  os.makedirs(outMetaPath)
 if not os.path.exists(outDataPath):
-  os.makedirs(outDataPath)   
+  os.makedirs(outDataPath)
 
 
-nuDataOut = nuData.copy() 
+nuDataOut = nuData.copy()
 with open(outDataPath + '/barcodes.tsv', 'w') as f:
   for item in nuDataOut.obs_names:
   f.write(item + '\n')
@@ -140,6 +140,3 @@ subprocess.call(CmdGzip,shell=True)
 nuDataOut.obs.to_csv(outMetaPath + '/metadata.csv')
 pd.DataFrame(adataOut.obsm["X_umap"], index=nuDataOut.obs_names).to_csv(outMetaPath + '/X_umap.csv')
 pd.DataFrame(adataOut.obsm["X_pca"], index=nuDataOut.obs_names).to_csv(outMetaPath + '/X_pca.csv')
-
-
-
